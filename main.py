@@ -1,3 +1,4 @@
+import sys
 import os
 from datetime import datetime
 from akiya_scrapper.akiya import AkiyaScraperV1
@@ -14,6 +15,7 @@ akiya = {
 def main():
     scrape = AkiyaScraperV1(akiya["api"], akiya["filename"], akiya["path"])
     scrape.scrape()
+    sys.exit()
 
 
 if __name__ == "__main__":
