@@ -10,6 +10,7 @@ class AkiyaConfig(BaseModel):
     bucket: str
     last_page: int
     chunk_size: int
+    secret: str
     listing_attributes: List[str]
 
 
@@ -62,5 +63,6 @@ akiya_config = AkiyaConfig(
     bucket=config("BUCKET"),
     last_page=config("LAST_PAGE"),
     chunk_size=config("CHUNK_SIZE"),
+    secret=config("SECRET_KEY"),
     listing_attributes=LISTING_ATTRIBUTES,
 )
