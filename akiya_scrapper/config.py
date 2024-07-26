@@ -21,7 +21,7 @@ class AkiyaConfig(BaseModel):
 
 JAPAN_CITIES = [
     "Tokyo",
-    # "Yokohama",
+    "Yokohama",
     # "Osaka",
     # "Nagoya",
     # "Sapporo",
