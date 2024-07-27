@@ -1,4 +1,3 @@
-import sys
 import os
 from datetime import datetime, timezone
 from akiya_scrapper.akiya import AkiyaScraper

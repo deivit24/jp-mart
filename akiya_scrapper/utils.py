@@ -90,6 +90,15 @@ class CSVHandler:
         return data
 
     @staticmethod
+    def remove_duplicates(data: list, key):
+        unique_data_dict = {}
+        for item in data:
+            item_key = item.get(key)
+            if item_key and item_key not in unique_data_dict:
+                unique_data_dict[item_key] = item
+        return list(unique_data_dict.values())
+
+    @staticmethod
     def append_to_csv(csv_list, csv_filepath):
         if not os.path.exists(csv_filepath):
             logger.error(f"CSV file '{csv_filepath}' does not exist.")
@@ -98,7 +107,6 @@ class CSVHandler:
         with open(csv_filepath, mode="a", newline="", encoding="utf-8") as file:
             writer = csv.writer(file)
             writer.writerows(csv_list)
-        logger.info(f"Appended to CSV file '{csv_filepath}' successfully.")
 
 
 def flatten_dict(d, parent_key="", sep="_", index_offset=1):

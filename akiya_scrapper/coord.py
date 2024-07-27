@@ -28,10 +28,10 @@ class CityCoord:
 
         for city in cities:
             logger.info(
-                f"Getting coordinates of {city} of {len(cities)} cities in Japan"
+                f"Getting coordinates of {city.name} of {len(cities)} cities in Japan"
             )
 
-            base_url = self.api.format(city)
+            base_url = self.api.format(city.name)
             result = self.data_fetcher.get_data(base_url)
             coord = result["results"]
             north_east = coord.get("north_east")
@@ -41,13 +41,14 @@ class CityCoord:
                 north_east.get("lat"),
                 south_west.get("lon"),
                 south_west.get("lat"),
-                150,
+                city.num,
             )
-            logger.info(f"Splitting coords into 100 for {city}")
+            logger.info(
+                f"Splitting coordinates into {city.num} sections for {city.name}"
+            )
             for rec in rect:
-                rec["city"] = city
+                rec["city"] = city.name
                 row = dict_csv_list(rec, akiya_config.coordinate_attributes)
-                print(row)
                 csv_list.append(row)
 
             time.sleep(2)
