@@ -4,7 +4,45 @@ import os
 from requests import Session
 from requests.exceptions import HTTPError
 
-logger = logging.getLogger(__name__)
+
+def setup_logger(name, log_file=None, level=logging.INFO):
+    """
+    Function to set up a logger with both console and file handlers.
+
+    :param name: Name of the logger.
+    :param log_file: Path to the log file. If None, logs will not be saved to a file.
+    :param level: Logging level (default: logging.INFO).
+    :return: Configured logger.
+    """
+    logger = logging.getLogger(name)
+    logger.setLevel(level)
+
+    # Create a console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(level)
+    console_formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+    console_handler.setFormatter(console_formatter)
+    logger.addHandler(console_handler)
+
+    if log_file:
+        log_dir = os.path.dirname(log_file)
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+        # Create a file handler
+        file_handler = logging.FileHandler(log_file)
+        file_handler.setLevel(level)
+        file_formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
+        file_handler.setFormatter(file_formatter)
+        logger.addHandler(file_handler)
+
+    return logger
+
+
+logger = setup_logger(__file__)
 
 
 class LoginHandler:
@@ -141,16 +179,28 @@ def dict_csv_list(data, attributes):
     return csv_row
 
 
-def divide_rectangle(ne_lon, ne_lat, sw_lon, sw_lat, num_sections=10):
-    # Determine the number of sections along each axis
-    num_sections_per_axis = int(num_sections**0.5)  # Assuming a square grid of sections
+def divide_rectangle(ne_lon, ne_lat, sw_lon, sw_lat, num_sections_per_axis=10):
+    # Determine the horizontal and vertical distances
+    horizontal_distance = ne_lon - sw_lon
+    vertical_distance = ne_lat - sw_lat
 
+    # Adjust to form a square
+    if horizontal_distance > vertical_distance:
+        # Adjust latitude to match longitude distance
+        adjusted_ne_lat = sw_lat + horizontal_distance
+        adjusted_ne_lon = ne_lon
+    else:
+        # Adjust longitude to match latitude distance
+        adjusted_ne_lon = sw_lon + vertical_distance
+        adjusted_ne_lat = ne_lat
+
+    # Assuming a square grid of sections
     # Calculate the size of each section
-    lon_interval = (ne_lon - sw_lon) / num_sections_per_axis
-    lat_interval = (ne_lat - sw_lat) / num_sections_per_axis
+    lon_interval = (adjusted_ne_lon - sw_lon) / num_sections_per_axis
+    lat_interval = (adjusted_ne_lat - sw_lat) / num_sections_per_axis
 
-    # List to hold the smaller rectangles
-    rectangles = []
+    # List to hold the smaller squares
+    squares = []
 
     # Generate the smaller rectangles
     for i in range(num_sections_per_axis):
@@ -161,7 +211,7 @@ def divide_rectangle(ne_lon, ne_lat, sw_lon, sw_lat, num_sections=10):
             rect_ne_lon = rect_sw_lon + lon_interval
             rect_ne_lat = rect_sw_lat + lat_interval
 
-            rectangles.append(
+            squares.append(
                 {
                     "sw_lon": rect_sw_lon,
                     "sw_lat": rect_sw_lat,
@@ -169,5 +219,33 @@ def divide_rectangle(ne_lon, ne_lat, sw_lon, sw_lat, num_sections=10):
                     "ne_lat": rect_ne_lat,
                 }
             )
+    logger.info(f"This is the total number of squares maybe?: {len(squares)}")
 
-    return rectangles
+    return squares
+
+
+def count_mapping(count: int) -> int:
+    """
+    This function is going to take in a count of the total listings of the city
+    and will return a number that will be divided by the coordinates of said city
+
+    Args:
+        count: (int)
+
+    Return:
+        int: This will be the total number
+    """
+    if count < 1000:
+        return 4
+    elif count < 3000:
+        return 6
+    elif count < 6000:
+        return 8
+    elif count < 8000:
+        return 12
+    elif count < 10000:
+        return 15
+    elif count < 12000:
+        return 18
+    else:
+        return 21

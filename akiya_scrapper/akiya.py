@@ -1,14 +1,12 @@
-import logging
 import time
 import os
 
 
 from akiya_scrapper.utils import dict_csv_list
 from akiya_scrapper.config import akiya_config
-from akiya_scrapper.utils import CSVHandler, DataFetcher, LoginHandler
+from akiya_scrapper.utils import CSVHandler, DataFetcher, LoginHandler, setup_logger
 
-logger = logging.getLogger(__file__)
-logging.basicConfig(level=logging.INFO)
+logger = setup_logger(__name__, log_file="akiya_scrapper/logs/akiya.log")
 
 
 class AkiyaScraper:
