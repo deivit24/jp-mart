@@ -42,7 +42,9 @@ def setup_logger(name, log_file=None, level=logging.INFO):
     return logger
 
 
-logger = setup_logger(__file__)
+error_logger = setup_logger(
+    __file__, log_file="akiya_scrapper/logs/error.log", level=logging.ERROR
+)
 
 
 class LoginHandler:
@@ -68,10 +70,10 @@ class LoginHandler:
 
         response = self.session.post(self.login_url, headers=headers, json=data)
         if response.status_code == 200:
-            logger.info("Login successful")
+            error_logger.info("Login successful")
         else:
-            logger.error(f"Login failed with status code {response.status_code}")
-            logger.error(response.text)
+            error_logger.error(f"Login failed with status code {response.status_code}")
+            error_logger.error(response.text)
             raise Exception("Authentication failed")
 
     def get_session(self):
@@ -101,10 +103,10 @@ class DataFetcher:
             response.raise_for_status()
             return response.json()
         except HTTPError as http_err:
-            logger.error(f"HTTP error occurred: {http_err}")
+            error_logger.error(f"HTTP error occurred: {http_err}")
             raise
         except Exception as err:
-            logger.error(f"An error occurred: {err}")
+            error_logger.error(f"An error occurred: {err}")
             raise
 
 
@@ -114,12 +116,12 @@ class CSVHandler:
         with open(csv_filepath, mode="w", newline="", encoding="utf-8") as file:
             writer = csv.writer(file)
             writer.writerows(csv_list)
-        logger.info(f"CSV file '{csv_filepath}' created successfully.")
+        error_logger.info(f"CSV file '{csv_filepath}' created successfully.")
 
     @staticmethod
     def read_csv_to_list(csv_filepath: str):
         if not os.path.exists(csv_filepath):
-            logger.error(f"CSV file '{csv_filepath}' does not exist.")
+            error_logger.error(f"CSV file '{csv_filepath}' does not exist.")
             return []
 
         with open(csv_filepath, mode="r", newline="", encoding="utf-8") as file:
@@ -139,7 +141,7 @@ class CSVHandler:
     @staticmethod
     def append_to_csv(csv_list, csv_filepath):
         if not os.path.exists(csv_filepath):
-            logger.error(f"CSV file '{csv_filepath}' does not exist.")
+            error_logger.error(f"CSV file '{csv_filepath}' does not exist.")
             return
 
         with open(csv_filepath, mode="a", newline="", encoding="utf-8") as file:
@@ -219,7 +221,6 @@ def divide_rectangle(ne_lon, ne_lat, sw_lon, sw_lat, num_sections_per_axis=10):
                     "ne_lat": rect_ne_lat,
                 }
             )
-    logger.info(f"This is the total number of squares maybe?: {len(squares)}")
 
     return squares
 
