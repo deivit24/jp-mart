@@ -3,6 +3,7 @@ import csv
 import os
 from requests import Session
 from requests.exceptions import HTTPError
+from tenacity import retry, stop_after_attempt, wait_fixed
 
 
 def setup_logger(name, log_file=None, level=logging.INFO):
@@ -84,6 +85,7 @@ class DataFetcher:
     def __init__(self, session):
         self.session = session
 
+    @retry(stop=stop_after_attempt(5), wait=wait_fixed(10))
     def get_data(self, url):
         headers = {
             "accept": "*/*",
@@ -249,4 +251,4 @@ def count_mapping(count: int) -> int:
     elif count < 12000:
         return 18
     else:
-        return 21
+        return 22
