@@ -131,21 +131,22 @@ JAPAN_CITIES = [
 ]
 
 LISTINGS_ATTRIBUTES = [
+    "listing_id",
+    "akiya_type",
     "construction_year",
     "gross_yield",
-    "image_urls",
     "is_featured",
     "is_liked",
     "kind",
     "lat",
     "like_count",
-    "listing_id",
     "lon",
     "prefecture",
     "price_foreign",
     "price_yen",
     "translated_address",
     "view_count",
+    "image_urls",
 ]
 LISTING_ATTRIBUTES = [
     "address",

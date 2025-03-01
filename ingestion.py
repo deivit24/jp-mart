@@ -29,7 +29,7 @@ def get_latest_csv(directory, pattern):
         key=lambda x: datetime.strptime(
             os.path.basename(x), "akiya_%Y-%m-%d_%H-%M-%S.csv"
         ),
-        reverse=true,
+        reverse=True,
     )
 
     # Return the most recent file
@@ -57,8 +57,8 @@ def copy_to_docker(from_path, container_name, to_path):
     try:
         subprocess.run(
             ["docker", "cp", from_path, f"{container_name}:{to_path}"],
-            check=true,
-            text=true,
+            check=True,
+            text=True,
         )
         print(
             f"File copied from {from_path} to {container_name}:{to_path} successfully."

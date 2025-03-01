@@ -1,4 +1,7 @@
 import os
+
+import argparse
+
 from datetime import datetime, timezone
 from akiya_scrapper.akiya import AkiyaScraper
 from akiya_scrapper.coord import CityCoord
@@ -34,6 +37,7 @@ def main():
         csv_handler,
     )
     akiya_scrapper.scrape()
+
 
 
 # This ensures the script is executed when run directly

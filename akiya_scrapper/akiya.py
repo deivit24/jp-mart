@@ -18,12 +18,25 @@ class AkiyaScraper:
         data_fetcher: DataFetcher,
         csv_handler: CSVHandler,
     ):
-        self.api = "https://www.akiya-mart.com/listings/paginate?house=true&condo=true&featured=false&currency=usd&neLon={}&neLat={}&swLon={}&swLat={}&isMetric=false&parkingOnly=false&sortBy=POPULAR"
+        self.api = "https://www.akiya-mart.com/listings/paginate?condo={}&house={}&featured=false&isSold=true&currency=usd&neLon={}&neLat={}&swLon={}&swLat={}&isMetric=false&parkingOnly=false&sortBy=POPULAR"
         self.filename = filename
         self.path = path
         self.login_handler = login_handler
         self.data_fetcher = data_fetcher
         self.csv_handler = csv_handler
+        self.akiya_types = [
+            {
+                "type": "house",
+                "is_house": "true",
+                "is_condo": "false",
+            },
+            {
+                "type": "condo",
+                "is_house": "false",
+                "is_condo": "true",
+
+            }
+        ]
 
     def scrape(self):
         self.login_handler.login()
@@ -42,40 +55,47 @@ class AkiyaScraper:
         last_log_time = time.time()
         surplus_coords = []
         logger.info("Starting to scrape data")
-        for coord in coord_list:
-            base_url = self.api.format(
-                coord.get("ne_lon"),
-                coord.get("ne_lat"),
-                coord.get("sw_lon"),
-                coord.get("sw_lat"),
-            )
+        for home_type in self.akiya_types:
+            akiya_type = home_type.get("type", None)
+            is_condo = home_type.get("is_condo", None)
+            is_house = home_type.get("is_house", None)
+            for coord in coord_list:
+                base_url = self.api.format(
+                    is_condo,
+                    is_house,
+                    coord.get("ne_lon"),
+                    coord.get("ne_lat"),
+                    coord.get("sw_lon"),
+                    coord.get("sw_lat"),
+                )
 
-            city = coord.get("city")
-            response = self.data_fetcher.get_data(base_url)
-            results = response.get("results")
-            count = results.get("count")
-            if count > 350:
-                coord["count"] = count
-                logger.info(f"{coord} is over 350 in {city}")
-                surplus_coords.append(coord)
+                city = coord.get("city")
+                response = self.data_fetcher.get_data(base_url)
+                results = response.get("results")
+                count = results.get("count")
+                if count > 350:
+                    coord["count"] = count
+                    logger.info(f"{coord} is over 350 in {city}")
+                    surplus_coords.append(coord)
 
-            listings = results.get("listings")
-            for listing in listings:
-                row = dict_csv_list(listing, akiya_config.listings_attributes)
-                csv_list.append(row)
-            # Append to CSV file
-            self.csv_handler.append_to_csv(
-                csv_list[1:], output_filepath
-            )  # Skip the header row for appending
-            csv_list = [akiya_config.listings_attributes]
-            # Log percentage progress every 1 minute
-            if time.time() - last_log_time >= 60:
-                percentage_complete = (current / total) * 100
-                logger.info(f"Progress: {percentage_complete:.2f}% complete...")
-                last_log_time = time.time()
+                listings = results.get("listings")
+                for listing in listings:
+                    listing["akiya_type"] = akiya_type
+                    row = dict_csv_list(listing, akiya_config.listings_attributes)
+                    csv_list.append(row)
+                # Append to CSV file
+                self.csv_handler.append_to_csv(
+                    csv_list[1:], output_filepath
+                )  # Skip the header row for appending
+                csv_list = [akiya_config.listings_attributes]
+                # Log percentage progress every 1 minute
+                if time.time() - last_log_time >= 60:
+                    percentage_complete = (current / total) * 100
+                    logger.info(f"Progress: {percentage_complete:.2f}% complete...")
+                    last_log_time = time.time()
 
-            current += 1
-            time.sleep(1.5)
+                current += 1
+                time.sleep(1.5)
 
         new_coords = akiya_config.coordinate_attributes
         new_coords.append("count")
@@ -95,6 +115,7 @@ class AkiyaScraper:
         unique_listing_ids = list(set(listing_ids))
         logger.info(f"Total Unique Listing IDs: {len(unique_listing_ids)}")
         unique_lisings = self.csv_handler.remove_duplicates(data, "listing_id")
+        logger.info(f"Total Unique Listing IDs After Removal: {len(unique_lisings)}")
         csv_list = [akiya_config.listings_attributes]
         for ul in unique_lisings:
             row = dict_csv_list(ul, akiya_config.listings_attributes)
