@@ -67,7 +67,7 @@ class LoginHandler:
             "sec-fetch-mode": "cors",
             "sec-fetch-site": "same-origin",
         }
-        data = {"email": self.email, "password": self.password, "rememberMe": True}
+        data = {"emailOrUsername": self.email, "password": self.password, "rememberMe": True}
 
         response = self.session.post(self.login_url, headers=headers, json=data)
         if response.status_code == 200:
@@ -132,7 +132,7 @@ class CSVHandler:
         return data
 
     @staticmethod
-    def remove_duplicates(data: list, key):
+    def remove_duplicates(data: list, key) -> list:
         unique_data_dict = {}
         for item in data:
             item_key = item.get(key)
@@ -243,12 +243,12 @@ def count_mapping(count: int) -> int:
     elif count < 3000:
         return 6
     elif count < 6000:
-        return 8
+        return 10
     elif count < 8000:
         return 12
     elif count < 10000:
-        return 15
+        return 14
     elif count < 12000:
-        return 18
+        return 16
     else:
-        return 22
+        return 18
