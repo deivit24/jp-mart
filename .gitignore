@@ -4,3 +4,4 @@ csv_files/**
 .python-version
 akiya_scrapper/logs
 .idea/
+logs

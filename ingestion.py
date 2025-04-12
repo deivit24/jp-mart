@@ -1,49 +1,79 @@
+import csv
 import glob
 import os
+import re
 import subprocess
 
 from psycopg2 import connect
 from decouple import config
-from datetime import datetime
+from datetime import datetime, timezone
 
+from akiya_scrapper.config import SHARED_VOLUME_PATH
 
-DOCKER_CONTAINER_NAME = "jp-mart-db"
-DOCKER_PATH = "/usr/local"
+CURRENT_DATE = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S")
 
-CSV_PATH = "csv_files/"
-CSV_PATTERN = "akiya_*.csv"
+CSV_PATH = f"{SHARED_VOLUME_PATH}/"
+CSV_PATTERN = "*.csv"
 
+OUTPUT_FILE = f"{CSV_PATH}{CURRENT_DATE}_latest.csv"
 
 def get_latest_csv(directory, pattern):
     # Create the full path pattern
     full_pattern = os.path.join(directory, pattern)
+
     # Get a list of files matching the pattern
     files = glob.glob(full_pattern)
 
+    # Define regex pattern for expected filenames
+    regex = re.compile(r"^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}_.+\.csv$")
+
+    # Filter out files that don't match the expected format
+    valid_files = [f for f in files if regex.match(os.path.basename(f))]
+
+    print(valid_files)
     # If no files found, return None
-    if not files:
+    if not valid_files:
         return None
 
     # Sort the files based on the datetime part of their names
-    files.sort(
+    valid_files.sort(
         key=lambda x: datetime.strptime(
-            os.path.basename(x), "akiya_%Y-%m-%d_%H-%M-%S.csv"
+            os.path.basename(x).rsplit("_", 1)[0],  # Extract everything before the last '_'
+            "%Y-%m-%d_%H-%M-%S"
         ),
         reverse=True,
     )
 
+
+    with open(OUTPUT_FILE, 'w', newline='', encoding='utf-8') as fout:
+        writer = None
+
+        for i, file in enumerate(valid_files):
+            with open(file, 'r', encoding='utf-8') as fin:
+                reader = csv.reader(fin)
+                headers = next(reader)
+
+                if writer is None:
+                    writer = csv.writer(fout)
+                    writer.writerow(headers)  # Write header only once
+
+                for row in reader:
+                    writer.writerow(row)
+    # Delete the original valid files after merging
+    for file in valid_files:
+        try:
+            os.remove(file)
+            print(f"Deleted: {file}")
+        except Exception as e:
+            print(f"Failed to delete {file}: {e}")
+
     # Return the most recent file
-    return os.path.basename(files[0])
+    return os.path.basename(OUTPUT_FILE)
 
 
 # Get the most recent CSV file
 latest_jp_mart_file = get_latest_csv(CSV_PATH, CSV_PATTERN)
 
-
-JP_MART_PATH = os.path.abspath(os.path.join(CSV_PATH, latest_jp_mart_file))
-
-
-CSV_PATH_LIST = [JP_MART_PATH]
 
 DB_PARAMS = {
     "host": config("POSTGRES_HOST"),
@@ -53,119 +83,53 @@ DB_PARAMS = {
 }
 
 
-def copy_to_docker(from_path, container_name, to_path):
-    try:
-        subprocess.run(
-            ["docker", "cp", from_path, f"{container_name}:{to_path}"],
-            check=True,
-            text=True,
-        )
-        print(
-            f"File copied from {from_path} to {container_name}:{to_path} successfully."
-        )
-    except subprocess.CalledProcessError as e:
-        print(f"Error running the 'docker cp' command: {e}")
-    except FileNotFoundError:
-        print(
-            "Docker command not found. Make sure Docker is installed and available in your PATH."
-        )
-
-
-for csv_path in CSV_PATH_LIST:
-    copy_to_docker(csv_path, DOCKER_CONTAINER_NAME, DOCKER_PATH)
-
-
 sql_script = f"""
-
 DROP SCHEMA IF EXISTS akiya CASCADE;
 CREATE SCHEMA IF NOT EXISTS akiya;
 DROP TABLE IF EXISTS akiya.listings;
 
 CREATE TABLE akiya.listings (
-    address text,
-    building_area decimal,
+    listing_id integer primary key,
+    city text,
+    akiya_type text,
     construction_year integer,
-    description text,
-    first_seen_at timestamp,
     gross_yield decimal,
-    has_free_parking boolean,
-    image_urls text,
-    is_condo boolean,
-    is_geocoded boolean,
-    is_hidden boolean,
+    is_featured boolean,
     is_liked boolean,
-    is_toushi boolean,
-    land_area text,
-    last_seen_at timestamp,
+    kind text,
     lat double precision,
     like_count integer,
-    listing_id integer PRIMARY KEY,
-    llm_area text,
-    llm_description text,
     lon double precision,
-    management_fee_foreign decimal,
-    management_fee_yen integer,
-    needs_update boolean,
     prefecture text,
     price_foreign decimal,
     price_yen integer,
-    remarks text,
-    repair_fee_foreign decimal,
-    repair_fee_yen integer,
-    station_distance text,
-    station_lat double precision,
-    station_lon double precision,
-    station_name text,
     translated_address text,
-    translated_condition text,
-    translated_description text,
-    translated_remarks text,
-    url text
+    view_count integer,
+    image_urls text
+
 );
 
 
 COPY akiya.listings (
-    address,
-    building_area,
+    listing_id,
+    city,
+    akiya_type,
     construction_year,
-    description,
-    first_seen_at,
     gross_yield,
-    has_free_parking,
-    image_urls,
-    is_condo,
-    is_geocoded,
-    is_hidden,
+    is_featured,
     is_liked,
-    is_toushi,
-    land_area,
-    last_seen_at,
+    kind,
     lat,
     like_count,
-    listing_id,
-    llm_area,
-    llm_description,
     lon,
-    management_fee_foreign,
-    management_fee_yen,
-    needs_update,
     prefecture,
     price_foreign,
     price_yen,
-    remarks,
-    repair_fee_foreign,
-    repair_fee_yen,
-    station_distance,
-    station_lat,
-    station_lon,
-    station_name,
     translated_address,
-    translated_condition,
-    translated_description,
-    translated_remarks,
-    url
+    view_count,
+    image_urls
 )
-FROM '/usr/local/{latest_jp_mart_file}' CSV HEADER DELIMITER '|' QUOTE '"';
+FROM '{CSV_PATH}{latest_jp_mart_file}' CSV HEADER DELIMITER ',' QUOTE '"';
 """
 
 try:
