@@ -1,0 +1,9 @@
+version: 2
+
+sources:
+  - name: akiya
+    schema: akiya
+    tables:
+      - name: listings
+        identifier: listings
+        description: This is RAW listings
