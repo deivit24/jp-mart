@@ -1,0 +1,9 @@
+
+version: 2
+
+models:
+  - name: condos
+    description: "raw condo data"
+
+  - name: houses
+    description: "raw house data"
