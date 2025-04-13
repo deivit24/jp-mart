@@ -2,7 +2,6 @@ import csv
 import glob
 import os
 import re
-import subprocess
 
 from psycopg2 import connect
 from decouple import config
@@ -71,9 +70,6 @@ def get_latest_csv(directory, pattern):
     return os.path.basename(OUTPUT_FILE)
 
 
-# Get the most recent CSV file
-latest_jp_mart_file = get_latest_csv(CSV_PATH, CSV_PATTERN)
-
 
 DB_PARAMS = {
     "host": config("POSTGRES_HOST"),
@@ -83,74 +79,82 @@ DB_PARAMS = {
 }
 
 
-sql_script = f"""
-DROP SCHEMA IF EXISTS akiya CASCADE;
-CREATE SCHEMA IF NOT EXISTS akiya;
-DROP TABLE IF EXISTS akiya.listings;
 
-CREATE TABLE akiya.listings (
-    listing_id integer primary key,
-    city text,
-    akiya_type text,
-    construction_year integer,
-    gross_yield decimal,
-    is_featured boolean,
-    is_liked boolean,
-    kind text,
-    lat double precision,
-    like_count integer,
-    lon double precision,
-    prefecture text,
-    price_foreign decimal,
-    price_yen integer,
-    translated_address text,
-    view_count integer,
-    image_urls text
+def generate_sql():
+    # Get the most recent CSV file
+    latest_jp_mart_file = get_latest_csv(CSV_PATH, CSV_PATTERN)
+    sql_script = f"""
+    DROP SCHEMA IF EXISTS akiya CASCADE;
+    CREATE SCHEMA IF NOT EXISTS akiya;
+    DROP TABLE IF EXISTS akiya.listings;
+    
+    CREATE TABLE akiya.listings (
+        listing_id integer primary key,
+        city text,
+        akiya_type text,
+        construction_year integer,
+        gross_yield decimal,
+        is_featured boolean,
+        is_liked boolean,
+        kind text,
+        lat double precision,
+        like_count integer,
+        lon double precision,
+        prefecture text,
+        price_foreign decimal,
+        price_yen integer,
+        translated_address text,
+        view_count integer,
+        image_urls text
+    
+    );
+    
+    
+    COPY akiya.listings (
+        listing_id,
+        city,
+        akiya_type,
+        construction_year,
+        gross_yield,
+        is_featured,
+        is_liked,
+        kind,
+        lat,
+        like_count,
+        lon,
+        prefecture,
+        price_foreign,
+        price_yen,
+        translated_address,
+        view_count,
+        image_urls
+    )
+    FROM '{CSV_PATH}{latest_jp_mart_file}' CSV HEADER DELIMITER ',' QUOTE '"';
+    """
 
-);
+    return sql_script
 
+def ingestion():
+    sql_script = generate_sql()
+    try:
+        # Connect to the PostgreSQL database
+        connection = connect(**DB_PARAMS)
 
-COPY akiya.listings (
-    listing_id,
-    city,
-    akiya_type,
-    construction_year,
-    gross_yield,
-    is_featured,
-    is_liked,
-    kind,
-    lat,
-    like_count,
-    lon,
-    prefecture,
-    price_foreign,
-    price_yen,
-    translated_address,
-    view_count,
-    image_urls
-)
-FROM '{CSV_PATH}{latest_jp_mart_file}' CSV HEADER DELIMITER ',' QUOTE '"';
-"""
+        # Create a cursor object
+        cursor = connection.cursor()
 
-try:
-    # Connect to the PostgreSQL database
-    connection = connect(**DB_PARAMS)
+        # Execute the SQL script, passing the full paths as parameters
+        cursor.execute(sql_script)
 
-    # Create a cursor object
-    cursor = connection.cursor()
+        # Commit the changes
+        connection.commit()
 
-    # Execute the SQL script, passing the full paths as parameters
-    cursor.execute(sql_script)
+        print("SQL script executed successfully.")
 
-    # Commit the changes
-    connection.commit()
+    except Exception as e:
+        print(f"Error: {e}")
 
-    print("SQL script executed successfully.")
-
-except Exception as e:
-    print(f"Error: {e}")
-
-finally:
-    # Close the cursor and connection
-    cursor.close()
-    connection.close()
+    finally:
+        # Close the cursor and connection
+        cursor.close()
+        connection.close()
