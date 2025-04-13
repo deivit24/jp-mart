@@ -3,6 +3,7 @@ from akiya_scrapper.akiya import AkiyaScraper
 from akiya_scrapper.coord import CityCoord
 from akiya_scrapper.utils import LoginHandler, DataFetcher, CSVHandler
 from akiya_scrapper.config import akiya_config, JAPAN_CITIES, SHARED_VOLUME_PATH
+from ingestion import ingestion
 
 # Get the current date and time for the filename
 CURRENT_DATE = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S")
@@ -38,3 +39,5 @@ def main(city: str):
 if __name__ == "__main__":
     for japan_city in JAPAN_CITIES:
         main(japan_city.name)
+
+    ingestion()
